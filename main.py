@@ -1,6 +1,6 @@
 import os
 from pptx import Presentation
-from pptx.util import Inches
+from pptx.util import Inches, Pt
 from datetime import datetime
 import calculation as report
 
@@ -9,45 +9,111 @@ file_path = "scratch/MTRABAJO - Oct 14, 2024 - 12 01 11 PM.csv"
 pptx_template_path = "powerpoints/Reporte_plantilla.pptx"
 
 # Cargar y limpiar datos
-df = report.load_data(file_path)
-df_cleaned = report.clean_data(df)
-df_cleaned = report.filtrar_sentimientos(df_cleaned)
+df_cleaned = report.load_and_clean_data(file_path)
+df_cleaned['Influencer'] = df_cleaned.apply(report.update_influencer, axis=1)
+df_cleaned['Sentiment'] = df_cleaned.apply(report.update_sentiment, axis=1)
 
 # Obtener métricas
-total_mentions, count_of_authors, estimated_reach = report.calculate_metrics(df_cleaned)
-formatted_estimated_reach = report.format_number(estimated_reach)
+total_mentions, count_of_authors, estimated_reach = report.calculate_summary_metrics(df_cleaned)
+formatted_estimated_reach = estimated_reach
 
-# Guardar datos limpios
-report.save_cleaned_data(df_cleaned, file_path)
+# Guardar datos en csv
+report.save_cleaned_csv(df_cleaned, file_path)
 
 # Crear gráficos
-# report.plot_by_date_or_hour(df_cleaned, use_hours=True)
-report.plot_sentiment_distribution(df_cleaned)
+report.create_mentions_evolution_chart(df_cleaned)
+report.create_sentiment_pie_chart(df_cleaned)
 
-# Preparar nombre del archivo y cliente
+# Obtener distribución de plataformas
+platform_counts, max_reach_per_platform = report.distribucion_plataforma(df_cleaned)
+
+# Obtener las noticias más relevantes
+top_sentences = report.get_top_hit_sentences(df_cleaned)
+
+# Obtener influencers
+top_influencers_prensa = report.top_influencers_prensa_digital(df_cleaned)
+top_influencers_redes_posts = report.top_influencers_redes_sociales_by_posts(df_cleaned)
+top_influencers_redes_reach = report.top_influencers_redes_sociales_by_reach(df_cleaned)
+
+# Obtener nombre del archivo y cliente
 current_date = datetime.now().strftime('%d-%b-%Y')
+current_date_file_name = datetime.now().strftime('%d-%b-%Y, %H %M %S')
 client_name = os.path.basename(file_path).split()[0]
 
 # Cargar presentación y modificar slides
 prs = Presentation(pptx_template_path)
-slides_info = [
-    {'slide_num': 0, 'replace_dict': {"REPORT_CLIENT": client_name, "REPORT_DATE": current_date}},
-    {'slide_num': 1, 'replace_dict': {"NUMB_MENTIONS": str(total_mentions), "NUMB_ACTORS": str(count_of_authors), "EST_REACH": formatted_estimated_reach}},
-    {'slide_num': 2, 'replace_dict': {"TOP_NEWS": "\n".join(df_cleaned['Hit Sentence'].head(5))}},
-    {'slide_num': 3, 'replace_dict': {}, 'image': 'sentiment_pie_chart.png'}
-]
 
-for slide_info in slides_info:
-    slide = prs.slides[slide_info['slide_num']]
-    for shape in slide.shapes:
-        if shape.has_text_frame:
-            for key, value in slide_info['replace_dict'].items():
-                if key in shape.text:
-                    shape.text = value
-        if 'image' in slide_info and shape.shape_type == 13:
-            slide.shapes.add_picture(slide_info['image'], Inches(1), Inches(1), width=Inches(4), height=Inches(4))
+# Modificar slide 1
+slide1 = prs.slides[0]
+for shape in slide1.shapes:
+    if shape.has_text_frame:
+        for key, value in {"REPORT_CLIENT": client_name, "REPORT_DATE": current_date}.items():
+            if key in shape.text:
+                report.set_text_style(shape, str(value), 'Effra Heavy', Pt(28), False)
 
-# Guardar presentación con el nombre de "REPORT_CLIENT"
-output_filename = f"{client_name} {current_date}.pptx"
+# Modificar slide 2
+slide2 = prs.slides[1]
+for shape in slide2.shapes:
+    if shape.has_text_frame:
+        for key, value in {
+            "NUMB_MENTIONS": str(total_mentions),
+            "NUMB_ACTORS": str(count_of_authors),
+            "EST_REACH": formatted_estimated_reach
+        }.items():
+            if key in shape.text:
+                report.set_text_style(shape, str(value), font_size=Pt(22), center=True)
+
+    elif shape.shape_type == 13:
+        slide2.shapes.add_picture('scratch/convEvolution.png', Inches(0.2), Inches(1.2), width=Inches(10.46), height=Inches(5.63))
+
+# Modificar slide 3
+slide3 = prs.slides[2]
+for shape in slide3.shapes:
+    if shape.has_text_frame:
+        for key, value in {"TOP_NEWS": "\n".join(top_sentences)}.items():
+            if key in shape.text:
+                report.set_text_style(shape, str(value), 'Effra Light', Pt(12), False)
+try:
+    slide3.shapes.add_picture('scratch/Wordcloud.png', Inches(7.5), Inches(3.5), width=Inches(4.2), height=Inches(2.66)) 
+except Exception as e:
+    print(e)
+
+# Modificar slide 4
+slide4 = prs.slides[3]
+for shape in slide4.shapes:
+    if shape.shape_type == 13:
+        slide4.shapes.add_picture('scratch/sentiment_pie_chart.png', Inches(1), Inches(1), width=Inches(6), height=Inches(6))
+
+# Modificar slide 5
+slide5 = prs.slides[4]
+for shape in slide5.shapes:
+    if shape.has_text_frame:
+        for key, value in {"NUMB_PRENSA": platform_counts['Prensa Digital']}.items():
+            if key in shape.text:
+                report.set_text_style(shape, str(value), font_size=Pt(28))
+try:
+    report.add_dataframe_as_table(slide5, top_influencers_prensa, Inches(2.65), Inches(2), Inches(8), Inches(4))
+except Exception as e:
+    print("Error al añadir la tabla en slide5:", e)
+
+# Modificar slide 6
+slide6 = prs.slides[5]
+for shape in slide6.shapes:
+    if shape.has_text_frame:
+        for key, value in {"NUMB_REDES": platform_counts['Redes Sociales']}.items():
+            if key in shape.text:
+                report.set_text_style(shape, str(value), font_size=Pt(28))
+try:
+    report.add_dataframe_as_table(slide6, top_influencers_redes_posts, Inches(0.56), Inches(2), Inches(7), Inches(4))
+except Exception as e:
+    print("Error al añadir la tabla en slide6 (posts):", e)
+
+try:
+    report.add_dataframe_as_table(slide6, top_influencers_redes_reach, Inches(8), Inches(2), Inches(5), Inches(4))
+except Exception as e:
+    print("Error al añadir la tabla en slide6 (reach):", e)
+
+# Guardar presentación
+output_filename = f"{client_name} {current_date_file_name}.pptx"
 prs.save(output_filename)
 print(f"Presentación guardada como {output_filename}")
