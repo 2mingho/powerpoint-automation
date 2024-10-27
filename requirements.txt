@@ -1,0 +1,6 @@
+# Required packages for the project
+python-pptx==0.6.21
+pandas==1.5.3
+numpy==1.23.5
+matplotlib==3.7.1
+wordcloud==1.8.2.2
