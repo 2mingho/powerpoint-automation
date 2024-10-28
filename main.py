@@ -5,8 +5,8 @@ from datetime import datetime
 import calculation as report
 
 # Variables y rutas de archivo
-file_path = "scratch/MTRABAJO - Oct 14, 2024 - 12 01 11 PM.csv"
-pptx_template_path = "powerpoints/Reporte_plantilla.pptx"
+file_path = "scratch\SIE_2023 - Oct 27, 2024 - 3 52 57 PM.csv" # Esta es la ruta del csv a evaluar, para la versión web se debe cambiar
+pptx_template_path = "powerpoints/Reporte_plantilla.pptx" # Ruta de la plantilla pptx
 
 # Cargar y limpiar datos
 df_cleaned = report.load_and_clean_data(file_path)
