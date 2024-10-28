@@ -1,19 +1,36 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Generador de Reportes</title>
-</head>
-<body>
-    <h1>Sube tu archivo CSV y opcionalmente la Wordcloud</h1>
-    <form action="/" method="post" enctype="multipart/form-data">
-        <label for="csv_file">Archivo CSV:</label>
-        <input type="file" id="csv_file" name="csv_file" required><br><br>
-        
-        <label for="wordcloud_file">Wordcloud (opcional):</label>
-        <input type="file" id="wordcloud_file" name="wordcloud_file"><br><br>
-        
-        <button type="submit">Generar Reporte</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subir Archivos</title>
+  </head>
+  <body>
+    <h1>Subir Archivos</h1>
+    <form action="/" method="POST" enctype="multipart/form-data">
+      <!-- Input para el archivo CSV, sólo permite .csv -->
+      <label for="csv_file">Archivo CSV (Codificación UTF-16):</label>
+      <input type="file" id="csv_file" name="csv_file" accept=".csv" required />
+      <small>Asegúrese de que el archivo esté en UTF-16</small>
+      <br /><br />
+
+      <!-- Input para el archivo de Wordcloud (solo PNG) -->
+      <label for="wordcloud_file">Archivo PNG para Wordcloud:</label>
+      <input
+        type="file"
+        id="wordcloud_file"
+        name="wordcloud_file"
+        accept="image/png"
+      />
+      <small>Solo se permiten archivos PNG</small>
+      <br /><br />
+
+      <label>
+        Solo fecha
+        <input type="checkbox" name="solo_fecha" value="True" /> </label
+      ><br /><br />
+
+      <button type="submit">Generar Reporte</button>
     </form>
-</body>
+  </body>
 </html>

@@ -125,6 +125,21 @@ def create_mentions_evolution_chart(df, date_column='Alternate Date Format', tim
     plt.xticks(rotation=90, ha='right')
     plt.tight_layout()
     plt.savefig(output_path, transparent=True)
+    
+def create_mentions_evolution_chart_by_date(df, date_column='Alternate Date Format', output_path='scratch/convEvolution.png'):
+    df['date'] = pd.to_datetime(df[date_column], format='%d-%b-%y').dt.date
+    df_grouped = df.groupby('date').size().reset_index(name='count')
+    df_grouped = df_grouped.sort_values('date')
+    
+    fig, ax = plt.subplots(figsize=(13, 7))
+    ax.plot(df_grouped['date'], df_grouped['count'], linewidth=3.5, color='orange')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
+    plt.xticks(rotation=90, ha='right')
+    plt.tight_layout()
+    plt.savefig(output_path, transparent=True)
 
 # Función para generar gráfico de pie de sentimientos
 def create_sentiment_pie_chart(df, output_path='scratch/sentiment_pie_chart.png'):

@@ -1,3 +1,4 @@
+import shutil
 from flask import Flask, render_template, request, send_file, redirect, url_for
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -52,7 +53,13 @@ def process_report(csv_path, wordcloud_path):
     formatted_estimated_reach = estimated_reach
     report.save_cleaned_csv(df_cleaned, csv_path)  # Guardar CSV procesado
     
-    report.create_mentions_evolution_chart(df_cleaned)
+    # Decidir qué gráfico generar en base al checkbox "solo_fecha"
+    solo_fecha = request.form.get('solo_fecha') == 'True'  # Evaluar si el checkbox está marcado
+    if solo_fecha:
+        report.create_mentions_evolution_chart_by_date(df_cleaned)  # Solo por fecha
+    else:
+        report.create_mentions_evolution_chart(df_cleaned) 
+    
     report.create_sentiment_pie_chart(df_cleaned)
 
     # Obtener distribución de plataformas
@@ -152,7 +159,21 @@ def process_report(csv_path, wordcloud_path):
 
 @app.route('/download/<path:filename>')
 def download_file(filename):
-    return send_file(filename, as_attachment=True)
+    # Enviar el archivo al usuario
+    response = send_file(filename, as_attachment=True)
+    # Vaciar la carpeta `scratch` después de enviar el archivo
+    folder = app.config['UPLOAD_FOLDER']
+    try:
+        for file in os.listdir(folder):
+            file_path = os.path.join(folder, file)
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+    except Exception as e:
+        print(f"Error al limpiar la carpeta scratch: {e}")
+    
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)
